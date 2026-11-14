@@ -1,4 +1,4 @@
-from enum import Enum, auto
+from enum import StrEnum, Enum, auto
 
 class Ranks(Enum):
     ACE = auto()
@@ -15,9 +15,20 @@ class Ranks(Enum):
     QUEEN = auto()
     KING = auto()
 
-
 class Suits(Enum):
     DIAMONDS = auto()
     CLUBS = auto()
     HEARTS = auto()
     SPADES = auto()
+
+class TurnState(Enum):
+    PLAYER_TURN = auto()
+    DEALER_TURN = auto()
+    FINISHED = auto()
+
+class Actions(StrEnum):
+    HIT = "H"
+    STAND = "S"
+    DOUBLE = "D"
+    SPLIT = "P"
+    SURRENDER = "R"
