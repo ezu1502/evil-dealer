@@ -1,7 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from enums import Ranks, Suits
+from engine.enums import Ranks, Suits
 import random
+from engine.enums import Actions
 
 CARD_SCORES: dict[Ranks, int] = {
     Ranks.ACE: 1, # or 11
@@ -158,3 +159,17 @@ class Dealer(Player):
     def choose_action(self):
         return super().choose_action() # depois lógica do dealer, mas depois vemos
 
+
+
+@dataclass(frozen = True)
+class Message:
+    text: str
+
+    options: tuple[tuple[str, Actions], ...] | None = field(default = None, kw_only = True)
+
+    def __bool__(self):
+        return bool(self.text.strip())
+
+    def __str__(self):
+        return self.text
+    
