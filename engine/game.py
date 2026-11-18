@@ -23,8 +23,12 @@ class Game:
         
         return self._messages.pop(0)
     
-    def add_message(self, message: Message) -> None:
+    def add_message(self, message: Message | str) -> None:
         if not message:
+            return
+
+        if isinstance(message, str):
+            self._messages.append(Message(message))
             return
         
         self._messages.append(message)
@@ -87,26 +91,39 @@ class Game:
         if not self.state == TurnState.PLAYER_TURN:
             return
 
-        self.add_message(self.view())
         option: Actions = action
 
         match option:
             case Actions.HIT:
+                self.add_message(
+                    "You get another card..."
+                )
                 self.deck.give_cards(self.player, amount = 1)
 
                 if self.player.busted:
-                    # busted!
+                    self.add_message(
+                        f"{self.player.card_view()} - ({self.player.score})\n\n"
+                        "And you busted!"
+                    )
 
                     self.set_state(TurnState.FINISHED)
 
                 elif self.player.score == 21:
-                    # 21!
+                    self.add_message(
+                        f"{self.player.card_view()} - ({self.player.score})\n\n"
+                        "And you got 21!"
+                    )
 
                     self.set_state(TurnState.DEALER_TURN)
+
+                else:
+                    self.add_message(self.view())
                     
 
             case Actions.STAND:
+                self.add_message("You decide to stand.")
                 self.set_state(TurnState.DEALER_TURN)
+
             # case Actions.DOUBLE:
             #     ...
             # case Actions.SPLIT:
@@ -115,28 +132,37 @@ class Game:
             #     ...
             case _:
                 raise RuntimeError(f"Invalid Action: {option}")
-
+            
         return True
 
     def dealer_turn(self):
         if not self.state == TurnState.DEALER_TURN:
             return
         
-        self.add_message(Message(
+        self.add_message(
             "DEALER'S TURN!\n\n"
             "The Evil Dealer reveals his hidden card...\n"
             f"{self.dealer.card_view(hidden = False)}\n"
-        ))
+        )
 
         cards_hitted: int = 0
 
         while(self.dealer.score < 17): #S17
             self.deck.give_cards(self.dealer, amount = 1)
-            self.add_message(Message(f"{self.dealer.card_view(hidden = False)} - {self.dealer.score}"))
+
+            self.add_message("The Evil Dealer draws another card...")
+            self.add_message(Message(f"{self.dealer.card_view(hidden = False)} - ({self.dealer.score})"))
             cards_hitted += 1
 
         if cards_hitted == 0:
             self.add_message(Message("The Dealer stands. No more cards for him."))
+
+        if self.dealer.score > 21:
+            self.add_message("And he busted!")
+
+        elif self.dealer.score == 21:
+            self.add_message("And the Dealer gets 21!")
+
 
         self.set_state(TurnState.FINISHED)
 

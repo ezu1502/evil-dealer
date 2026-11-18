@@ -9,7 +9,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from telegram.ext import CallbackQueryHandler
 
 from engine.core import Message
-from engine.enums import Actions
+from engine.enums import Actions, TurnState as TS
 
 
 TOKEN: str = get_telegram_bot_token()
@@ -81,13 +81,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if context.user_data is None:
         return
 
-    _game = context.user_data.get("game")
-    
-    if _game is None:
-        return
-
-    game: Game = _game
-
     query: CallbackQuery = update.callback_query
     await query.answer()
 
@@ -96,20 +89,81 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     action = Actions(query.data)
 
-    game.player_action(action)
+    if action == Actions.PLAY_AGAIN:
+        game = Game().prepare_game()
+        context.user_data["game"] = game
+        await flush_messages(game = game, update = update)
 
-    await flush_messages(game = game, update = update)
+        return
 
-    
-    
-    
-    
-
-
+    _game = context.user_data.get("game")
+    if _game is None:
+        return
+    game: Game = _game
 
 
-    
+        
 
+    if not game.check_state(TS.FINISHED):
+        game.player_action(action)
+
+        await flush_messages(game = game, update = update)
+
+        if game.check_state(TS.DEALER_TURN):
+            game.dealer_turn()
+
+            await flush_messages(game = game, update = update)
+
+
+            if game.check_state(TS.FINISHED):
+                winner = game.determine_winner()
+
+                if winner is None:
+                    if game.player.score != game.dealer.score:
+                        raise RuntimeError("Winner was None while their scores were different")
+                    
+                    await send_message(
+                        f"No winners this round! Both you and the Evil Dealer got {game.player.score}",
+                        update = update
+                    )
+                else:
+                    winner_str: str = "YOU" if winner is game.player else "The Evil Dealer"
+
+                    await send_message(
+                        f"The winner is... {winner_str}!\n"
+                        f"With {winner.score} points",
+                        update = update
+                    )
+
+                await send_message(
+                    Message(
+                        "Do you want to play again?",
+                        options = (("Yes", Actions.PLAY_AGAIN), ("No", Actions.END))
+                    ),
+                    update = update
+                )
+            return
+
+
+
+            
+    else:
+        if action == Actions.END:
+            del context.user_data["game"]
+            del game
+
+            await send_message(
+                Message(
+                    "Thank you for wasting your time (and chips).\n"
+                    "If you wanna play again, tap the button below or type the command /play",
+
+                    options = (("PLAY again", Actions.PLAY_AGAIN),)
+                ),
+                update = update
+            )
+
+        else:
+            raise RuntimeError("Invalid Action given at current TurnState")
 
 
 def main() -> None:

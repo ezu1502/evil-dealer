@@ -32,3 +32,6 @@ class Actions(StrEnum):
     DOUBLE = "D"
     SPLIT = "P"
     SURRENDER = "R"
+
+    PLAY_AGAIN = "play_again"
+    END = "end"
